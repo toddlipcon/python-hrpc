@@ -120,6 +120,32 @@ class DatanodeInfo(DatanodeID):
     self.hostname = writable.read_text(ins)
     self.admin_state = writable.read_text(ins)
 
+class FsPermission(Writable):
+  type_identifier = "org.apache.hadoop.fs.permission.FsPermission"
+  def read(self, ins):
+    self.mode = writable.read_short(ins)
+
+
+class FileStatus(Writable):
+  type_identifier = "org.apache.hadoop.fs.FileStatus"
+
+  # TODO init, write
+  def read(self, ins):
+    self.path = writable.read_text(ins)
+    self.length = writable.read_long(ins)
+    self.isdir = writable.read_bool(ins)
+    self.block_replication = writable.read_short(ins)
+    self.blocksize = writable.read_long(ins)
+    self.modification_time = writable.read_long(ins)
+    self.access_time  = writable.read_long(ins)
+
+    self.permission = FsPermission()
+    self.permission.read(ins)
+
+    self.owner = writable.read_text(ins)
+    self.group = writable.read_text(ins)
+
+
 class VersionedProtocol(object):
   java_class = "org.apache.hadoop.ipc.VersionedProtocol"
 
@@ -142,6 +168,13 @@ class ClientProtocol(VersionedProtocol):
     [writable.Obj.Enum("org.apache.hadoop.hdfs.protocol.FSConstants$DatanodeReportType")],
     writable.Obj.Array(DatanodeInfo))
 
+  getFileInfo = MethodPrototype(
+    [writable.Obj.String],
+    FileStatus)
+
+  getListing = MethodPrototype(
+    [writable.Obj.String],
+    writable.Obj.Array(FileStatus))
 
 c = client.Client(ClientProtocol)
 c.connect("127.0.0.1", 8020)
@@ -149,3 +182,5 @@ print c.proxy.getProtocolVersion(ClientProtocol.java_class, 0)
 print c.proxy.getStats()
 print c.proxy.getBlockLocations("/user/todd/grepout/part-00000", 0, 1000)
 print c.proxy.getDatanodeReport("ALL")
+print c.proxy.getFileInfo("/user/todd/grepout/part-00000")
+print c.proxy.getListing("/user/todd/grepout/")
