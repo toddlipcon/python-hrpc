@@ -20,7 +20,6 @@ class LocatedBlocks(Writable):
       b.write(out)
 
   def read(self, ins):
-    __import__("pdb").set_trace()
     self.file_length = writable.read_long(ins)
     self.under_construction = writable.read_bool(ins)
     num_blocks = writable.read_int(ins)
@@ -116,7 +115,6 @@ class DatanodeInfo(DatanodeID):
     self.last_update = writable.read_long(ins)
 
     self.xceiver_count = writable.read_int(ins)
-    __import__("pdb").set_trace()
     self.location = writable.read_text(ins)
     self.hostname = writable.read_text(ins)
     self.admin_state = writable.read_text(ins)

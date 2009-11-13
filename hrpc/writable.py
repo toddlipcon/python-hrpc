@@ -161,7 +161,11 @@ class Obj(object):
 
 
 class Writable(object):
-  pass
+  def __str__(self):
+    return repr(self.__dict__)
+
+  def __repr__(self):
+    return str(self)
 
 class LongWritable(Writable):
   def __init__(self, n=0):
