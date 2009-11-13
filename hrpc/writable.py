@@ -140,6 +140,14 @@ class Obj(object):
     def read(ins):
       return read_utf8(ins)
 
+  class Enum(object):
+    def __init__(self, clazz):
+      self.type_identifier = clazz
+
+    @staticmethod
+    def write(out, val):
+      write_utf8(out, val)
+
   class Array(object):
     def __init__(self, elem_type):
       self.elem_type = elem_type
@@ -147,10 +155,9 @@ class Obj(object):
     @property
     def type_identifier(self):
       if hasattr(self.elem_type, 'short_identifier'):
-        short_name = self.elem_type.short_identifier
+        return "[" + self.elem_type.short_identifier
       else:
-        short_name = self.elem_type.type_identifier
-      return "[" + short_name
+        return "[L" + self.elem_type.type_identifier + ";"
 
     def read(self, ins):
       arraylen = read_int(ins)

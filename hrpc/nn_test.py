@@ -84,6 +84,7 @@ class DatanodeID(Writable):
   # TODO write
 
 class DatanodeInfo(DatanodeID):
+  type_identifier = "org.apache.hadoop.hdfs.protocol.DatanodeInfo"
   def __init__(self):
     self.ipc_port = 0
     self.capacity = 0
@@ -137,6 +138,9 @@ class ClientProtocol(VersionedProtocol):
     [writable.Obj.String, writable.Obj.Long, writable.Obj.Long],
     LocatedBlocks)
 
+  getDatanodeReport = MethodPrototype(
+    [writable.Obj.Enum("org.apache.hadoop.hdfs.protocol.FSConstants$DatanodeReportType")],
+    writable.Obj.Array(DatanodeInfo))
 
 
 c = client.Client(ClientProtocol)
@@ -144,4 +148,4 @@ c.connect("127.0.0.1", 8020)
 print c.proxy.getProtocolVersion(ClientProtocol.java_class, 0)
 print c.proxy.getStats()
 print c.proxy.getBlockLocations("/user/todd/grepout/part-00000", 0, 1000)
-
+print c.proxy.getDatanodeReport("ALL")
