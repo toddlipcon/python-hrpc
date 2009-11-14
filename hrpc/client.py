@@ -37,12 +37,9 @@ class Client(object):
     if call_id_back != self.call_id:
       raise IOError("Mismatched call ids- sent %d got %d" % (self.call_id, call_id_back))
     self.call_id += 1
-    print "call id " + str(call_id_back)
     if status_back == STATUS_SUCCESS:
-      print "success status"
       return prototype.read_response(self.stream)
     elif status_back == STATUS_EXCEPTION:
-      print "error status"
       raise self._read_exception()
     else:
       raise IOError("Unknown status code: " + status_back)

@@ -182,9 +182,9 @@ class ClientProtocol(VersionedProtocol):
     [obj_writable.String],
     obj_writable.Array(FileStatus))
 
-#  setPermission = MethodPrototype(
-#    [obj_writable.String, FsPermission],
-#    writable.Void)
+  setPermission = MethodPrototype(
+    [obj_writable.String, FsPermission],
+    obj_writable.Void)
 
 c = client.Client(ClientProtocol)
 c.connect("127.0.0.1", 8020)

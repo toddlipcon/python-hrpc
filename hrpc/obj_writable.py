@@ -2,7 +2,8 @@
 
 from hrpc.writable import *
 
-TYPES = {}
+PRIMITIVE_TYPES = {}
+ARRAY_CHARS = {}
 
 class Type(object):
   def __init__(self, clazz, array_char, reader, writer):
@@ -11,8 +12,9 @@ class Type(object):
     self.reader = reader
     self.writer = writer
 
-    TYPES[clazz] = self
-
+    PRIMITIVE_TYPES[clazz] = self
+    if array_char:
+      ARRAY_CHARS[array_char] = self
 
   def write(self, out, val):
     self.writer(out, val)
@@ -20,6 +22,20 @@ class Type(object):
   def read(self, ins):
     return self.reader(ins)
 
+# Functions for dealing with java class name mangling
+def _is_array(clazz):
+  return clazz.startswith("[")
+
+def _get_array_class(clazz):
+  assert _is_array(clazz)
+  if clazz[1] in ARRAY_CHARS:
+    return ARRAY_CHARS[clazz[1]].clazz
+  elif clazz[1] == 'L':
+    # Array of some clazz
+    assert clazz.endswith(";")
+    return clazz[2:-1]
+  else:
+    raise IOError("Bad array class: " + clazz)
 
 Bool = Type("boolean", "Z", read_bool, write_bool)
 Byte = Type("byte", "B", read_byte, write_byte)
@@ -30,7 +46,7 @@ Int = Type("int", "I", read_int, write_int)
 Long = Type("long", "J", read_long, write_long)
 Short = Type("short", "S", read_short, write_short)
 String = Type("java.lang.String", None, read_utf8, write_utf8)
-
+Void = Type("void", None, read_utf8, write_utf8)
 
 class Enum(object):
   def __init__(self, clazz):
@@ -62,28 +78,58 @@ class Array(object):
       ret.append(read_object(ins, self.elem_type))
     return ret
 
+
+class Null(object):
+  clazz = "org.apache.hadoop.io.ObjectWritable$NullInstance"
+
+  def read(self, ins):
+    self.declared_clazz = read_utf8(ins)
+
+
+class Void(object):
+  clazz = "org.apache.hadoop.io.ObjectWritable$NullInstance"
+
+  def read(self, ins):
+    declared_clazz = read_utf8(ins)
+    assert declared_clazz == "void"
+
 def write_object(out, obj_type, data):
   write_utf8(out, obj_type.clazz)
   if isinstance(obj_type, type) and issubclass(obj_type, (Writable,)):
     assert isinstance(data, obj_type)
-    write_utf8(out, data.type_identifier)
+    write_utf8(out, data.clazz)
     data.write(out)
   else:
     obj_type.write(out, data)
 
 def read_object(ins, obj_type):
-  clazz = read_utf8(ins)
-  if clazz != obj_type.clazz:
-    raise IOError("Expected " + obj_type.clazz +
-                  " and got " + clazz)
+  declared_clazz = read_utf8(ins)
+  primitive = PRIMITIVE_TYPES.get(declared_clazz)
 
-  if isinstance(obj_type, type) and issubclass(obj_type, (Writable,)):
-    # it sends the declared class first, then the real class, I think
-    # but it should always be the same as far as I know!
+  if primitive:
+    # We expect that for primitives, we were expecting the type
+    # we got.
+    if declared_clazz != obj_type.clazz:
+      raise IOError("Expected " + obj_type.clazz +
+                    " and got " + declared_clazz)
+    return obj_type.read(ins)
+
+  elif _is_array(declared_clazz):
+    assert isinstance(obj_type, Array)
+    component_type = _get_array_class(declared_clazz)
+    assert component_type == obj_type.elem_type.clazz
+    length = read_int(ins)
+    ret = []
+    for i in xrange(0, length):
+      ret.append(read_object(ins, obj_type.elem_type))
+    return ret
+  elif declared_clazz == "java.lang.String":
+    assert obj_type == String
+    return read_utf8(ins)
+  else:
     real_clazz = read_utf8(ins)
-    assert real_clazz == "org.apache.hadoop.io.Writable" or real_clazz == clazz
     instance = obj_type()
     instance.read(ins)
     return instance
-  else:
-    return obj_type.read(ins)
+
+  assert False
