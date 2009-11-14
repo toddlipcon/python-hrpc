@@ -186,6 +186,24 @@ class ClientProtocol(VersionedProtocol):
     [obj_writable.String, FsPermission],
     obj_writable.Void)
 
+  mkdirs = MethodPrototype(
+    [obj_writable.String, FsPermission],
+    obj_writable.Bool)
+
+  delete = MethodPrototype(
+    [obj_writable.String, obj_writable.Bool],
+    obj_writable.Bool)
+
+  rename = MethodPrototype(
+    [obj_writable.String, obj_writable.String],
+    obj_writable.Bool)
+
+  setOwner = MethodPrototype(
+    [obj_writable.String, obj_writable.String, obj_writable.String],
+    obj_writable.Void)
+
+  
+
 c = client.Client(ClientProtocol)
 c.connect("127.0.0.1", 8020)
 print c.proxy.getProtocolVersion(ClientProtocol.java_class, 0)
@@ -195,3 +213,7 @@ print c.proxy.getDatanodeReport("ALL")
 print c.proxy.getFileInfo("/user/todd/grepout/part-00000")
 print c.proxy.getListing("/user/todd/grepout/")
 c.proxy.setPermission("/user/todd/grepout/", FsPermission(493))
+print c.proxy.mkdirs("/user/todd/footest", FsPermission(493))
+print c.proxy.rename("/user/todd/footest", "/user/todd/foobar")
+c.proxy.setOwner("/user/todd/foobar", "todd2", "group")
+print c.proxy.delete("/user/todd/foobar", True)
