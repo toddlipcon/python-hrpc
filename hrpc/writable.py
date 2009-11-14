@@ -17,6 +17,9 @@ def read_byte(ins):
 def read_bool(ins):
   return read_byte(ins) != 0
 
+def read_char(ins):
+  return unicode(ins.read(2), 'utf-16')
+
 def read_utf8(ins):
   length = read_short(ins)
   return unicode(ins.read(length), 'utf8')
@@ -52,6 +55,9 @@ def _decode_vint_size(b):
 
 def write_long(out, n):
   out.write(pack(">q", n))
+
+def write_char(out, c):
+  raise Exception("no chars, please")
 
 def write_int(out, n):
   out.write(pack(">l", n))
@@ -98,73 +104,6 @@ def write_string(out, str):
   write_int(out, len(encoded))
   out.write(encoded)
 
-def write_object(out, obj_type, data):
-  write_utf8(out, obj_type.type_identifier)
-  obj_type.write(out, data)
-
-def read_object(ins, obj_type):
-  clazz = read_utf8(ins)
-  if clazz != obj_type.type_identifier:
-    raise IOError("Expected " + obj_type.type_identifier +
-                  " and got " + clazz)
-
-  if isinstance(obj_type, type) and issubclass(obj_type, (Writable,)):
-    # it sends the declared class first, then the real class, I think
-    # but it should always be the same as far as I know!
-    real_clazz = read_utf8(ins)
-    assert real_clazz == clazz
-    instance = obj_type()
-    instance.read(ins)
-    return instance
-  else:
-    return obj_type.read(ins)
-
-class Obj(object):
-  class Long(object):
-    type_identifier = "long"
-    short_identifier = "J"
-    @staticmethod
-    def write(out, n):
-      write_long(out, n)
-
-    @staticmethod
-    def read(ins):
-      return read_long(ins)
-
-  class String(object):
-    type_identifier = "java.lang.String"
-    @staticmethod
-    def write(out, s):
-      write_utf8(out, s)
-    @staticmethod
-    def read(ins):
-      return read_utf8(ins)
-
-  class Enum(object):
-    def __init__(self, clazz):
-      self.type_identifier = clazz
-
-    @staticmethod
-    def write(out, val):
-      write_utf8(out, val)
-
-  class Array(object):
-    def __init__(self, elem_type):
-      self.elem_type = elem_type
-
-    @property
-    def type_identifier(self):
-      if hasattr(self.elem_type, 'short_identifier'):
-        return "[" + self.elem_type.short_identifier
-      else:
-        return "[L" + self.elem_type.type_identifier + ";"
-
-    def read(self, ins):
-      arraylen = read_int(ins)
-      ret = []
-      for i in xrange(0, arraylen):
-        ret.append(read_object(ins, self.elem_type))
-      return ret
 
 
 class Writable(object):
@@ -173,6 +112,8 @@ class Writable(object):
 
   def __repr__(self):
     return str(self)
+
+
 
 class LongWritable(Writable):
   def __init__(self, n=0):

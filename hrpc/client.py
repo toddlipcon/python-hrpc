@@ -1,6 +1,6 @@
 #!/usr/bin/env python2.4
 
-from hrpc import writable
+from hrpc import writable, obj_writable
 from cStringIO import StringIO
 import socket
 
@@ -89,10 +89,10 @@ class MethodPrototype(object):
   def write_params(self, out, data):
     writable.write_int(out, len(data))
     for t, d in zip(self.param_types, data):
-      writable.write_object(out, t, d)
+      obj_writable.write_object(out, t, d)
 
   def read_response(self, ins):
-    return writable.read_object(ins, self.ret_type)
+    return obj_writable.read_object(ins, self.ret_type)
 
 class StreamWrapper(object):
   def __init__(self, sock):

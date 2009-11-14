@@ -1,11 +1,11 @@
 #!/usr/bin/python2.4
 
-from hrpc import client, writable
-from hrpc.writable import Obj, Writable
+from hrpc import client, writable, obj_writable
+from hrpc.writable import Writable
 from hrpc.client import MethodPrototype
 
 class LocatedBlocks(Writable):
-  type_identifier = "org.apache.hadoop.hdfs.protocol.LocatedBlocks"
+  clazz = "org.apache.hadoop.hdfs.protocol.LocatedBlocks"
   def __init__(self):
     self.file_length = 0
     self.under_construction = False
@@ -84,7 +84,7 @@ class DatanodeID(Writable):
   # TODO write
 
 class DatanodeInfo(DatanodeID):
-  type_identifier = "org.apache.hadoop.hdfs.protocol.DatanodeInfo"
+  clazz = "org.apache.hadoop.hdfs.protocol.DatanodeInfo"
   def __init__(self):
     self.ipc_port = 0
     self.capacity = 0
@@ -121,13 +121,19 @@ class DatanodeInfo(DatanodeID):
     self.admin_state = writable.read_text(ins)
 
 class FsPermission(Writable):
-  type_identifier = "org.apache.hadoop.fs.permission.FsPermission"
+  clazz = "org.apache.hadoop.fs.permission.FsPermission"
+
+  def __init__(self, mode=0):
+    self.mode = mode
+
   def read(self, ins):
     self.mode = writable.read_short(ins)
 
+  def write(self, out):
+    writable.write_short(out, self.mode)
 
 class FileStatus(Writable):
-  type_identifier = "org.apache.hadoop.fs.FileStatus"
+  clazz = "org.apache.hadoop.fs.FileStatus"
 
   # TODO init, write
   def read(self, ins):
@@ -150,31 +156,35 @@ class VersionedProtocol(object):
   java_class = "org.apache.hadoop.ipc.VersionedProtocol"
 
   getProtocolVersion = MethodPrototype(
-    [writable.Obj.String, writable.Obj.Long],
-    writable.Obj.Long)
+    [obj_writable.String, obj_writable.Long],
+    obj_writable.Long)
 
 class ClientProtocol(VersionedProtocol):
   java_class = "org.apache.hadoop.hdfs.protocol.ClientProtocol"
 
   getStats = MethodPrototype(
     [],
-    writable.Obj.Array(writable.Obj.Long))
+    obj_writable.Array(obj_writable.Long))
 
   getBlockLocations = MethodPrototype(
-    [writable.Obj.String, writable.Obj.Long, writable.Obj.Long],
+    [obj_writable.String, obj_writable.Long, obj_writable.Long],
     LocatedBlocks)
 
   getDatanodeReport = MethodPrototype(
-    [writable.Obj.Enum("org.apache.hadoop.hdfs.protocol.FSConstants$DatanodeReportType")],
-    writable.Obj.Array(DatanodeInfo))
+    [obj_writable.Enum("org.apache.hadoop.hdfs.protocol.FSConstants$DatanodeReportType")],
+    obj_writable.Array(DatanodeInfo))
 
   getFileInfo = MethodPrototype(
-    [writable.Obj.String],
+    [obj_writable.String],
     FileStatus)
 
   getListing = MethodPrototype(
-    [writable.Obj.String],
-    writable.Obj.Array(FileStatus))
+    [obj_writable.String],
+    obj_writable.Array(FileStatus))
+
+#  setPermission = MethodPrototype(
+#    [obj_writable.String, FsPermission],
+#    writable.Void)
 
 c = client.Client(ClientProtocol)
 c.connect("127.0.0.1", 8020)
@@ -184,3 +194,4 @@ print c.proxy.getBlockLocations("/user/todd/grepout/part-00000", 0, 1000)
 print c.proxy.getDatanodeReport("ALL")
 print c.proxy.getFileInfo("/user/todd/grepout/part-00000")
 print c.proxy.getListing("/user/todd/grepout/")
+c.proxy.setPermission("/user/todd/grepout/", FsPermission(493))
