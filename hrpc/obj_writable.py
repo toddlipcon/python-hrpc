@@ -71,13 +71,6 @@ class Array(object):
   def clazz(self):
     return _array_class(self.elem_type)
 
-  def read(self, ins):
-    arraylen = read_int(ins)
-    ret = []
-    for i in xrange(0, arraylen):
-      ret.append(read_object(ins, self.elem_type))
-    return ret
-
 
 class Null(object):
   clazz = "org.apache.hadoop.io.ObjectWritable$NullInstance"
@@ -131,5 +124,3 @@ def read_object(ins, obj_type):
     instance = obj_type()
     instance.read(ins)
     return instance
-
-  assert False
